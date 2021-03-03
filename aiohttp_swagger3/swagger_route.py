@@ -27,10 +27,13 @@ class RequestValidationFailed(web.HTTPBadRequest):
 
 def _get_fn_parameters(fn: _SwaggerHandler) -> Tuple[str, ...]:
     func = cast(FunctionType, fn)
-    if func.__closure__ is None or inspect.isclass(func.__closure__[0].cell_contents):
+    if func.__closure__ is None:
         arg_count = func.__code__.co_argcount + func.__code__.co_kwonlyargcount
         return func.__code__.co_varnames[:arg_count]
-    return _get_fn_parameters(func.__closure__[0].cell_contents)
+    for closure in func.__closure__:
+        if inspect.isfunction(closure.cell_contents):
+            return _get_fn_parameters(closure.cell_contents)
+    raise TypeError(f"Handling closures for function {fn} failed")
 
 
 @attr.attrs(slots=True, auto_attribs=True)
